@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SI AREMA-Bot | Asisten Pengawas SMA Malang</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Perbaikan: Menggunakan flex-1 agar area chat mengambil ruang yang tersedia secara dinamis */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 200px;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        .message-bubble {
+            max-width: 85%;
+            word-wrap: break-word;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #9ca3af;
+            border-radius: 50%;
+            display: inline-block;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 flex items-center justify-center min-h-screen p-4">
+
+    <!-- Kontainer Utama -->
+    <div class="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200 h-auto max-h-[90vh]">
+        <!-- Header -->
+        <header class="bg-blue-600 p-6 text-white flex items-center gap-4 shadow-lg shrink-0">
+            <!-- Bagian Foto Profil Custom -->
+            <div class="relative w-14 h-14 shrink-0">
+                <img 
+                    src="foto-saya.jpg" 
+                    alt="Foto Pengawas" 
+                    class="w-full h-full object-cover rounded-full border-2 border-white/30 shadow-md"
+                    onerror="this.src='https://ui-avatars.com/api/?name=Pengawas+SMA&background=0D8ABC&color=fff'"
+                >
+                <div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-blue-600 rounded-full"></div>
+            </div>
+            
+            <div>
+                <h1 class="text-xl font-bold tracking-tight">SI AREMA-Bot</h1>
+                <p class="text-xs text-blue-100 font-medium uppercase tracking-wider">Digital Assistant Pengawas SMA Kab. Malang</p>
+            </div>
+            <div class="ml-auto">
+                <span class="flex items-center gap-2 px-3 py-1 bg-green-500/20 border border-green-400/30 rounded-full text-[10px] font-bold">
+                    <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span> ONLINE
+                </span>
+            </div>
+        </header>
+
+        <!-- Chat Area -->
+        <main id="chat-box" class="chat-container p-6 space-y-6 bg-slate-50/50">
+            <!-- Pesan Selamat Datang -->
+            <div class="flex justify-start">
+                <div class="message-bubble bg-white border border-slate-200 text-slate-800 p-4 rounded-2xl rounded-tl-none shadow-sm text-sm leading-relaxed">
+                    Selamat datang! Saya adalah <strong>SI AREMA-Bot</strong>, asisten AI untuk pendampingan sekolah Anda. 
+                    <br><br>
+                    Ada yang bisa saya bantu hari ini terkait Rapor Pendidikan, Akreditasi, atau administrasi sekolah Anda?
+                </div>
+            </div>
+        </main>
+
+        <!-- Input Area -->
+        <footer class="p-4 bg-white border-t border-slate-100 shrink-0">
+            <form id="chat-form" class="flex gap-2">
+                <input 
+                    type="text" 
+                    id="user-input" 
+                    placeholder="Tulis pertanyaan Anda di sini..." 
+                    class="flex-1 bg-slate-100 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none"
+                    autocomplete="off"
+                >
+                <button 
+                    type="submit" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold text-sm transition-all shadow-md active:scale-95"
+                >
+                    Kirim
+                </button>
+            </form>
+            <p class="text-[10px] text-center text-slate-400 mt-3 italic">
+                SI AREMA-Bot menggunakan Gemini 2.5 Flash. Pastikan backend tetap berjalan di terminal.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const chatBox = document.getElementById('chat-box');
+
+        let conversationHistory = [];
+
+        function createMessageElement(role, text) {
+            const wrapper = document.createElement('div');
+            wrapper.className = role === 'user' ? 'flex justify-end' : 'flex justify-start';
+
+            const bubble = document.createElement('div');
+            bubble.className = `message-bubble p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                role === 'user' 
+                ? 'bg-blue-600 text-white rounded-tr-none' 
+                : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none'
+            }`;
+            
+            bubble.innerHTML = text.replace(/\n/g, '<br>');
+            
+            wrapper.appendChild(bubble);
+            chatBox.appendChild(wrapper);
+            
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return bubble;
+        }
+
+        function showTypingIndicator() {
+            const wrapper = document.createElement('div');
+            wrapper.id = 'typing-indicator';
+            wrapper.className = 'flex justify-start';
+            wrapper.innerHTML = `
+                <div class="bg-white border border-slate-200 p-4 rounded-2xl rounded-tl-none flex gap-1 items-center shadow-sm">
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                </div>
+            `;
+            chatBox.appendChild(wrapper);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            createMessageElement('user', text);
+            conversationHistory.push({ role: 'user', text: text });
+            userInput.value = '';
+
+            showTypingIndicator();
+
+            try {
+                const response = await fetch('http://127.0.0.1:3000/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ conversation: conversationHistory })
+                });
+
+                if (!response.ok) throw new Error('Gagal menghubungi server backend.');
+
+                const data = await response.json();
+
+                const indicator = document.getElementById('typing-indicator');
+                if (indicator) indicator.remove();
+
+                if (data.result) {
+                    createMessageElement('model', data.result);
+                    conversationHistory.push({ role: 'model', text: data.result });
+                } else {
+                    createMessageElement('model', 'Maaf, server tidak memberikan respon.');
+                }
+
+            } catch (error) {
+                const indicator = document.getElementById('typing-indicator');
+                if (indicator) indicator.remove();
+                
+                createMessageElement('model', '⚠️ **Koneksi Gagal.**\nPastikan jendela PowerShell yang menampilkan pesan roket 🚀 tetap terbuka dan server sedang berjalan.');
+                console.error('Fetch Error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
